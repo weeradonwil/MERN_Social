@@ -1,0 +1,23 @@
+const dns = require("dns");
+
+dns.setServers(['8.8.8.8','1.1.1.1'])
+
+
+A01 - Broken Access Control การเข้าถึงโดยไม่มีสิทธิ์ (ทุก route ใส่ authMiddleware)
+มีการป้องกันครับ ใช้ authMiddleware ตรวจสอบ JWT token ทุก route ที่ต้องการสิทธิ์ และเช็คว่าเป็นเจ้าของโพสต์/กลุ่มก่อนลบ
+
+A02 - Cryptographic Failures รหัสผ่านไม่ปลอดภัย (userControllers รหัสผ่านตอน register)
+มีการป้องกันครับ รหัสผ่านเข้ารหัสด้วย bcryptjs ก่อนบันทึกลง MongoDB ไม่เก็บ plain text
+
+A03 - Injection ปลอมแปลงคำสั่ง (โฟลเดอร์ models Mongoose Schema กำหนด type)
+มีการป้องกัน ใช้ Mongoose ซึ่ง sanitize query อัตโนมัติ ป้องกัน NoSQL injection แปลง input ทุกอย่างเป็น string ธรรมดาอัตโนมัติ ทำให้ $gt ไม่ถูกอ่านเป็นคำสั่ง
+
+A05 - Security Misconfiguration ตั้งค่าระบบไม่ปลอดภัย (process.env)
+มีการป้องกันบางส่วนครับ ใช้ .env เก็บ secret keys, JWT_SECRET, Database URL ไม่ hardcode ใน code
+
+A07 - Identification and Authentication Failures ระบบ login ไม่ปลอดภัย (userControllers > JWT หมดอายุ 1 ชั่วโมง 
+, authControllers >reset password มีหมดอายุ 30 นาที)
+มีการป้องกันครับ ใช้ JWT token หมดอายุใน 1 ชั่วโมง, bcrypt hash รหัสผ่าน, ตรวจสอบ email format ก่อน register
+
+A09 - Security Logging and Monitoring Failures ไม่มีการบันทึก error (errorMiddleware > ดักจับ error ทุกตัว)
+มี error handling middleware ทุก route และ console.log errors ฝั่ง server
