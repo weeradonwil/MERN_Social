@@ -21,3 +21,6 @@ A07 - Identification and Authentication Failures ระบบ login ไม่ป
 
 A09 - Security Logging and Monitoring Failures ไม่มีการบันทึก error (errorMiddleware > ดักจับ error ทุกตัว)
 มี error handling middleware ทุก route และ console.log errors ฝั่ง server
+
+
+.
