@@ -41,7 +41,7 @@ const Register = () => {
   return (
     <section className="register">
       <div className="container register__container">
-        <h2>สมัครสมาชิก</h2>
+        <h2 style="text-align: center;">สมัครสมาชิก</h2>
         <form onSubmit={registerUser} >
           {error && <p className="form__error-message">{error}</p>}
           <input type="text" name='fullName' placeholder='Full Name' onChange={changeInputHandler} autoFocus />
@@ -60,7 +60,7 @@ const Register = () => {
           </div>
 
           <p>มีบัญชีอยู่แล้วใช่ไหม? <Link to="/login">เข้าสู่ระบบ</Link> </p>
-          <button type='submit' className='btn primary'>สมัครสมาชิก</button>
+          <button type='submit' className='btn primary' style="display: block; margin: 0 auto;">สมัครสมาชิก</button>
 
 
         </form>
