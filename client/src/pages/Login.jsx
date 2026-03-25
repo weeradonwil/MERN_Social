@@ -46,7 +46,7 @@ const Login = () => {
   return (
     <section className="register">
       <div className="container register__container">
-        <h2 style="text-align: center;">เข้าสู่ระบบ</h2>
+        <h2 style={{ textAlign: "center" }}>เข้าสู่ระบบ</h2>
         <form onSubmit={loginUser}>
           {error && <p className="form__error-message">{error}</p>}
 
@@ -71,7 +71,7 @@ const Login = () => {
 
           <p>ยังไม่มีบัญชีใช่ไหม? <Link to="/register">สมัครสมาชิก</Link></p>
           <p><Link to="/forgot-password">ลืมรหัสผ่าน?</Link></p>
-          <button type="submit" className="btn primary" style="display: block; margin: 0 auto;">เข้าสู่ระบบ</button>
+          <button type="submit" className="btn primary" style={{ display: "block", margin: "0 auto" }}>เข้าสู่ระบบ</button>
         </form>
       </div>
     </section>
