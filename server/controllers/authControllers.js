@@ -2,7 +2,8 @@ const HttpError = require('../models/errorModel')
 const UserModel = require('../models/userModel')
 const bcrypt = require('bcryptjs')
 const crypto = require('crypto')
-const nodemailer = require('nodemailer')
+const { Resend } = require("resend")
+const resend = new Resend(process.env.RESEND_API_KEY)
 
 // ===== Forgot Password =====
 // POST: api/auth/forgot-password
@@ -20,36 +21,36 @@ const forgotPassword = async (req, res, next) => {
         const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex')
 
         user.resetPasswordToken = hashedToken
-        user.resetPasswordExpire = Date.now() + 30 * 60 * 1000 // 30 นาที
+        user.resetPasswordExpire = Date.now() + 30 * 60 * 1000
         await user.save()
 
-        // ส่งอีเมล
         const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`
 
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS
-            }
+        const { data, error } = await resend.emails.send({
+            from: "Land@resend.dev",
+            to: user.email,
+            subject: "รีเซ็ตรหัสผ่านของคุณ",
+            html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #e84393;">รีเซ็ตรหัสผ่าน</h2>
+            <p>สวัสดี ${user.fullName || user.email},</p>
+            <p>คุณได้ขอรีเซ็ตรหัสผ่าน กรุณากดปุ่มด้านล่างภายใน <strong>30 นาที</strong></p>
+            <a href="${resetUrl}" style="display:inline-block; padding: 12px 24px; background:#e84393; color:white; text-decoration:none; border-radius:8px; margin: 16px 0;">
+                รีเซ็ตรหัสผ่าน
+            </a>
+            <p style="word-break: break-all;">หากปุ่มกดไม่ได้ ให้คัดลอกลิงก์นี้ไปเปิด:</p>
+            <p style="word-break: break-all;">${resetUrl}</p>
+            <p style="color: #999; font-size: 12px;">หากคุณไม่ได้ขอรีเซ็ตรหัสผ่าน กรุณาละเว้นอีเมลนี้</p>
+        </div>
+    `
         })
 
-        await transporter.sendMail({
-            from: `"LANDSLOT" <${process.env.EMAIL_USER}>`,
-            to: user.email,
-            subject: 'รีเซ็ตรหัสผ่านของคุณ',
-            html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <h2 style="color: #e84393;">รีเซ็ตรหัสผ่าน</h2>
-                    <p>สวัสดี ${user.fullName},</p>
-                    <p>คุณได้ขอรีเซ็ตรหัสผ่าน กรุณากดปุ่มด้านล่างภายใน <strong>30 นาที</strong></p>
-                    <a href="${resetUrl}" style="display:inline-block; padding: 12px 24px; background:#e84393; color:white; text-decoration:none; border-radius:8px; margin: 16px 0;">
-                        รีเซ็ตรหัสผ่าน
-                    </a>
-                    <p style="color: #999; font-size: 12px;">หากคุณไม่ได้ขอรีเซ็ตรหัสผ่าน กรุณาละเว้นอีเมลนี้</p>
-                </div>
-            `
-        })
+        if (error) {
+            console.log("Resend error:", error)
+            return next(new HttpError(error.message || "ส่งอีเมลไม่สำเร็จ", 500))
+        }
+
+        console.log("Resend success:", data)
 
         res.json({ message: "ส่งอีเมลรีเซ็ตรหัสผ่านแล้ว กรุณาตรวจสอบกล่องจดหมาย" })
 
