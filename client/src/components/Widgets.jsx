@@ -104,7 +104,7 @@ export const Widgets = () => {
             </div>
             <div className="friendRequest__info">
               <Link to={`/users/${user._id}`}>
-                <h5 style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80px' }}>{user?.fullName}</h5>
+                <h5 style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '90px' }}>{user?.fullName}</h5>
               </Link>
               <small style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100px', display: 'block' }}>{user?.email}</small>
             </div>

@@ -3,7 +3,7 @@
 
 :root {
   --color-primary: #3385ff;
-  --color-primary-variant:  #d3e4ff;
+  --color-primary-variant: #d3e4ff;
   --color-gray-0: #f8f9fb;
   --color-gray-100: #e3e7ed;
   --color-gray-200: #cbd1da;
@@ -43,7 +43,7 @@
 
 .red {
   --color-primary: #df2d56;
-  --color-primary-variant:  rgba(223, 45, 86, 0.2);
+  --color-primary-variant: rgba(223, 45, 86, 0.2);
 }
 
 .blue {
@@ -104,7 +104,12 @@ img {
   object-fit: cover;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   color: var(--color-gray-900);
 }
 
@@ -265,7 +270,7 @@ REGISTER & LOGIN
 }
 
 
-.register form > p a {
+.register form>p a {
   color: var(--color-primary);
   font-weight: 500;
 }
@@ -569,7 +574,7 @@ CREATE POST
 }
 
 .createPost__actions input {
-  visibility:collapse;
+  visibility: collapse;
   width: 0;
 }
 
@@ -704,7 +709,8 @@ FEEDS
 .feed__images {
   margin-top: 0.8rem;
   width: 100%;
-  height: 28rem;          /* กำหนดความสูงตายตัว */
+  height: 28rem;
+  /* กำหนดความสูงตายตัว */
   border-radius: var(--radius-2);
   overflow: hidden;
   background: var(--color-gray-100);
@@ -714,7 +720,8 @@ FEEDS
   width: 100%;
   height: 100%;
   display: block;
-  object-fit: cover;      /* ครอบเต็มกรอบ */
+  object-fit: cover;
+  /* ครอบเต็มกรอบ */
 }
 
 .feed__footer {
@@ -851,7 +858,7 @@ SINGLE POST
   overflow: hidden;
 }
 
-.singlePost__comment-body > div {
+.singlePost__comment-body>div {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -925,6 +932,9 @@ SUGGESTED FRIENDS
   display: flex;
   gap: 1rem;
   align-items: center;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .friendRequest__image {
@@ -947,6 +957,7 @@ SUGGESTED FRIENDS
   display: flex;
   gap: 0.6rem;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .friendRequest__actions button {
@@ -1011,7 +1022,7 @@ MESSAGE LIST OR CONVERSATIONS
 
 .messageList h3 {
   margin: 1.2rem;
-  
+
 }
 
 .messageList__item {
@@ -1099,7 +1110,8 @@ PROFILE
   opacity: 1;
 }
 
-.profile h4, .profile small {
+.profile h4,
+.profile small {
   text-align: center;
   display: block;
 }
@@ -1195,7 +1207,8 @@ EDIT PROFILE
   margin-top: 2rem;
 }
 
-.editProfile input, .editProfile textarea {
+.editProfile input,
+.editProfile textarea {
   background: var(--color-gray-100);
   padding: 1rem;
   border-radius: var(--radius-3);
@@ -1288,7 +1301,9 @@ THEME
 @keyframes animateModal {
   from {
     opacity: 0
-  } to {
+  }
+
+  to {
     opacity: 1;
   }
 }
@@ -1390,11 +1405,11 @@ THEME
 /*==========================================================
 FEED SKELETON
 ==========================================================*/
- .feedSkeleton {
+.feedSkeleton {
   display: flex;
   flex-direction: column;
   gap: 1rem;
- }
+}
 
 .feedSkeleton__item {
   height: fit-content;
@@ -1461,10 +1476,14 @@ FEED SKELETON
   0% {
     left: -100%;
     opacity: 1;
-  } 50% {
+  }
+
+  50% {
     left: calc(100% - 16rem);
     opacity: 0;
-  } 100% {
+  }
+
+  100% {
     left: 0;
     opacity: 0;
   }
@@ -1558,7 +1577,7 @@ MESSAGE BOX
   overflow-x: hidden;
   position: sticky;
   top: 0;
-  bottom:0
+  bottom: 0
 }
 
 .messagesBox__header {
@@ -1726,8 +1745,8 @@ MEDIA QUERIES (small screens)
     width: var(--container-w-sm);
   }
 
-  
-.editPost__container {
-  width: var(--container-w-sm);
-}
+
+  .editPost__container {
+    width: var(--container-w-sm);
+  }
 }

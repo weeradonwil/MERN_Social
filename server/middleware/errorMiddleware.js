@@ -9,8 +9,18 @@ const notFound = (req, res, next) => {
 // error middleware
 
 const errorHandler = (error, req, res, next) => {
-  res.status(error.code || 500).json({
-    message: error.message || "Server Error"
+  const statusCode = error.code || res.statusCode || 500
+
+  console.error("Error:", error)
+
+  let message = "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"
+
+  if ([400, 401, 403, 404, 422].includes(statusCode)) {
+    message = error.message
+  }
+
+  res.status(statusCode).json({
+    message
   })
 }
 

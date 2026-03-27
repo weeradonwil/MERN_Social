@@ -46,8 +46,14 @@ const forgotPassword = async (req, res, next) => {
         })
 
         if (error) {
-            console.log("Resend error:", error)
-            return next(new HttpError(error.message || "ส่งอีเมลไม่สำเร็จ", 500))
+            console.error("Resend error:", error)
+
+            const message =
+                process.env.NODE_ENV === "development"
+                    ? (error.message || "ส่งอีเมลไม่สำเร็จ")
+                    : "เกิดข้อผิดพลาดในการส่งอีเมล กรุณาลองใหม่อีกครั้ง"
+
+            return next(new HttpError(message, 500))
         }
 
         console.log("Resend success:", data)
@@ -55,7 +61,14 @@ const forgotPassword = async (req, res, next) => {
         res.json({ message: "ส่งอีเมลรีเซ็ตรหัสผ่านแล้ว กรุณาตรวจสอบกล่องจดหมาย" })
 
     } catch (error) {
-        return next(new HttpError(error.message || "Server Error", 500))
+        console.error("forgotPassword error:", error)
+
+        const message =
+            process.env.NODE_ENV === "development"
+                ? (error.message || "Server Error")
+                : "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"
+
+        return next(new HttpError(message, 500))
     }
 }
 

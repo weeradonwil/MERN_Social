@@ -13,13 +13,28 @@ const ForgotPassword = () => {
         setError('')
         setMessage('')
         setIsLoading(true)
+
         try {
-            const response = await axios.post(`${import.meta.env.VITE_API_URL}/auth/forgot-password`, { email })
-            setMessage(response?.data?.message)
+            const response = await axios.post(
+                `${import.meta.env.VITE_API_URL}/auth/forgot-password`,
+                { email }
+            )
+
+            setMessage(response?.data?.message || 'ส่งลิงก์รีเซ็ตรหัสผ่านแล้ว กรุณาตรวจสอบกล่องจดหมาย')
         } catch (err) {
-            setError(err?.response?.data?.message || 'เกิดข้อผิดพลาด')
+            const status = err?.response?.status
+            const serverMessage = err?.response?.data?.message
+
+            if (status === 404) {
+                setError('ไม่พบอีเมลนี้ในระบบ')
+            } else if (status === 422) {
+                setError(serverMessage || 'กรุณากรอกอีเมลให้ถูกต้อง')
+            } else {
+                setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง')
+            }
+        } finally {
+            setIsLoading(false)
         }
-        setIsLoading(false)
     }
 
     return (
