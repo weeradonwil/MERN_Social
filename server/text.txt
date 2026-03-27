@@ -22,7 +22,11 @@ A07 - Identification and Authentication Failures ระบบ login ไม่ป
 A09 - Security Logging and Monitoring Failures ไม่มีการบันทึก error (errorMiddleware > ดักจับ error ทุกตัว)
 มี error handling middleware ทุก route และ console.log errors ฝั่ง server
 
-EMAIL_USER=weeradonwil1005@gmail.com
+EMAIL_USER=xxxxxxxxxx
 EMAIL_PASS=aqhs fajf gion zxka
 CLIENT_URL=https://mern-social-iota.vercel.app
+CLIENT_URL=http://localhost:5173
+
+Render (free) “บล็อก SMTP port”  nodemailer ใช้ไม่ได้เพราะ ใช้ SMTP port  25 / 465 / 587
+Render ใช้ Resend ได้ เพราะใช้ HTTP / HTTPS API (port 443)
 .
