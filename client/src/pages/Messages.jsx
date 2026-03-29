@@ -44,7 +44,15 @@ const Messages = () => {
       query: { userId: loggedInUserId }
     })
     socketRef.current.on('newMessage', (msg) => {
-      setMessages(prev => [...prev, msg])
+      socketRef.current.on('newMessage', (msg) => {
+        const isCurrentConversation =
+          msg?.senderId?.toString() === receiverId ||
+          msg?.receiverId?.toString() === receiverId
+
+        if (isCurrentConversation) {
+          setMessages(prev => [...prev, msg])
+        }
+      })
     })
     return () => socketRef.current?.disconnect()
   }, [loggedInUserId])

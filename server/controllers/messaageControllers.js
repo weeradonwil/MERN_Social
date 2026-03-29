@@ -65,7 +65,7 @@ const createMessage = async (req, res, next) => {
         // ส่งผ่าน socket แบบ real-time
         const receiverSocketId = getReceiverSocketId(receiverId);
         if (receiverSocketId) {
-            io.to(receiverSocketId).emit("newMessage", newMessage);
+            io.to(receiverSocketId).emit("newMessage", { ...newMessage.toObject(), receiverId });
         }
 
         res.json(newMessage)
