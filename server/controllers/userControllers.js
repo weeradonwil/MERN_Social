@@ -6,8 +6,7 @@ const uuid = require("uuid").v4;
 const fs = require("fs")
 const path = require("path")
 const cloudinary = require("../utils/cloudinary")
-const { Resend } = require("resend")
-const resend = new Resend(process.env.RESEND_API_KEY)
+const sendEmail = require("../utils/mailer")
 
 // Register user
 // Post : api - users - register
@@ -54,8 +53,7 @@ const registerUser = async (req, res, next) => {
 
         // ส่ง Welcome Email
         try {
-            await resend.emails.send({
-                from: "Land@resend.dev",
+            await sendEmail({
                 to: lowercasedEmail,
                 subject: "ยินดีต้อนรับสู่ระบบ! 🎉",
                 html: `

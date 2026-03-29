@@ -2,8 +2,7 @@ const HttpError = require('../models/errorModel')
 const UserModel = require('../models/userModel')
 const bcrypt = require('bcryptjs')
 const crypto = require('crypto')
-const { Resend } = require("resend")
-const resend = new Resend(process.env.RESEND_API_KEY)
+const sendEmail = require("../utils/mailer")
 
 // ===== Forgot Password =====
 // POST: api/auth/forgot-password
@@ -26,8 +25,7 @@ const forgotPassword = async (req, res, next) => {
 
         const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`
 
-        const { data, error } = await resend.emails.send({
-            from: "Land@resend.dev",
+        const { data, error } = await sendEmail({
             to: user.email,
             subject: "รีเซ็ตรหัสผ่านของคุณ",
             html: `

@@ -29,7 +29,9 @@ EMAIL_USER=xxxxxxxxxx
 EMAIL_PASS=aqhs fajf gion zxka
 CLIENT_URL=https://mern-social-iota.vercel.app
 CLIENT_URL=http://localhost:5173
+RESEND_API_KEY=re_eWYUihjh_9eF37erT5aT9PMUFfPH7FcnY
 
 Render (free) “บล็อก SMTP port”  nodemailer ใช้ไม่ได้เพราะ ใช้ SMTP port  25 / 465 / 587
 Render ใช้ Resend ได้ เพราะใช้ HTTP / HTTPS API (port 443)
 .
+
