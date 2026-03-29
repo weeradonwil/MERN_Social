@@ -79,11 +79,11 @@ const CreatePost = ({ onCreatePost, error }) => {
                 <span></span>
                 <div className="createPost__actions">
                     {/* อัปโหลดรูป */}
-                    <label htmlFor="image" title="อัปโหลดรูปภาพ"><SlPicture /></label>
+                    <label htmlFor="image" title="อัปโหลดรูปภาพ" style={{ cursor: 'pointer' }}><SlPicture /></label>
                     <input type="file" id='image' accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
 
                     {/* อัปโหลดวิดีโอ */}
-                    <label htmlFor="video" title="อัปโหลดวิดีโอ"><MdVideoCameraBack /></label>
+                    <label htmlFor="video" title="อัปโหลดวิดีโอ" style={{ cursor: 'pointer' }}><MdVideoCameraBack /></label>
                     <input type="file" id='video' accept="video/*" onChange={handleVideoChange} style={{ display: 'none' }} />
 
                     <button type="submit">Post</button>
