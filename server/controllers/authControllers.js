@@ -25,7 +25,7 @@ const forgotPassword = async (req, res, next) => {
 
         const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`
 
-        const { data, error } = await sendEmail({
+        await sendEmail({
             to: user.email,
             subject: "รีเซ็ตรหัสผ่านของคุณ",
             html: `
@@ -43,18 +43,7 @@ const forgotPassword = async (req, res, next) => {
     `
         })
 
-        if (error) {
-            console.error("Resend error:", error)
-
-            const message =
-                process.env.NODE_ENV === "development"
-                    ? (error.message || "ส่งอีเมลไม่สำเร็จ")
-                    : "เกิดข้อผิดพลาดในการส่งอีเมล กรุณาลองใหม่อีกครั้ง"
-
-            return next(new HttpError(message, 500))
-        }
-
-        console.log("Resend success:", data)
+        console.log("SendGrid: ส่งอีเมลสำเร็จ")
 
         res.json({ message: "ส่งอีเมลรีเซ็ตรหัสผ่านแล้ว กรุณาตรวจสอบกล่องจดหมาย" })
 
@@ -64,7 +53,7 @@ const forgotPassword = async (req, res, next) => {
         const message =
             process.env.NODE_ENV === "development"
                 ? (error.message || "Server Error")
-                : "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"
+                : "เกิดข้อผิดพลาดในการส่งอีเมล กรุณาลองใหม่อีกครั้ง"
 
         return next(new HttpError(message, 500))
     }
@@ -87,6 +76,12 @@ const resetPassword = async (req, res, next) => {
         }
         if (password.length < 8) {
             return next(new HttpError("รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร", 422))
+        }
+        if (!/[A-Z]/.test(password)) {
+            return next(new HttpError("รหัสผ่านต้องมีตัวพิมพ์ใหญ่อย่างน้อย 1 ตัว (A-Z)", 422))
+        }
+        if (!/[!@#$%]/.test(password)) {
+            return next(new HttpError("รหัสผ่านต้องมีอักขระพิเศษอย่างน้อย 1 ตัว (!@#$%)", 422))
         }
 
         const hashedToken = crypto.createHash('sha256').update(token).digest('hex')
