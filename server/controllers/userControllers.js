@@ -51,28 +51,15 @@ const registerUser = async (req, res, next) => {
             password: hashedPassword
         });
 
-        // ส่ง Welcome Email
+        // ส่ง Verify Email
         try {
-            await sendEmail({
-                to: lowercasedEmail,
-                subject: "ยินดีต้อนรับสู่ระบบ! 🎉",
-                html: `
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                        <h2 style="color: #e84393;">ยินดีต้อนรับ, ${fullName}! 🎉</h2>
-                        <p>ขอบคุณที่สมัครสมาชิกกับเรา บัญชีของคุณพร้อมใช้งานแล้ว</p>
-                        <p>อีเมลที่ลงทะเบียน: <strong>${lowercasedEmail}</strong></p>
-                        <a href="${process.env.CLIENT_URL}/login" style="display:inline-block; padding: 12px 24px; background:#e84393; color:white; text-decoration:none; border-radius:8px; margin: 16px 0;">
-                            เข้าสู่ระบบ
-                        </a>
-                        <p style="color: #999; font-size: 12px;">หากคุณไม่ได้สมัครสมาชิก กรุณาละเว้นอีเมลนี้</p>
-                    </div>
-                `
-            });
+            const { sendVerifyEmail } = require("../controllers/authControllers")
+            await sendVerifyEmail(newUser)
         } catch (emailError) {
-            console.error("Welcome email error:", emailError);
+            console.error("Verify email error:", emailError)
         }
 
-        res.status(201).json(newUser);
+        res.status(201).json({ message: "สมัครสมาชิกสำเร็จ กรุณาตรวจสอบอีเมลเพื่อยืนยันบัญชี" });
     } catch (error) {
         return next(new HttpError(error.message || "Server Error", 500));
     }
@@ -90,11 +77,16 @@ const loginUser = async (req, res, next) => {
         if (!user) {
             return next(new HttpError("อีเมลหรือรหัสผ่านไม่ถูกต้อง", 422))
         }
-        const { uPassword, ...userInfo } = user;
         const comparedPass = await bcrypt.compare(password, user?.password);
         if (!comparedPass) {
             return next(new HttpError("อีเมลหรือรหัสผ่านไม่ถูกต้อง", 422))
         }
+
+        // เช็คว่า verify email แล้วหรือยัง
+        if (!user.isVerified) {
+            return next(new HttpError("กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ", 403))
+        }
+
         const token = await jwt.sign({ id: user?._id }, process.env.JWT_SECRET, { expiresIn: "1h" })
         res.status(200).json({ token, id: user?._id, profilePhoto: user?.profilePhoto });
     } catch (error) {

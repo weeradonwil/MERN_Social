@@ -15,6 +15,8 @@ import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import Groups from './pages/Groups'
 import SingleGroup from './pages/SingleGroup'
+import VerifyEmail from './pages/VerifyEmail'
+
 
 const router = createBrowserRouter([
   {
@@ -36,10 +38,13 @@ const router = createBrowserRouter([
   { path: '/logout', element: <Logout /> },
   { path: '/forgot-password', element: <ForgotPassword /> },
   { path: '/reset-password/:token', element: <ResetPassword /> },
+  { path: '/verify-email/:token', element: <VerifyEmail /> },
+  
 ])
 
 const App = () => {
   return <RouterProvider router={router} />
+  
 }
 
 export default App

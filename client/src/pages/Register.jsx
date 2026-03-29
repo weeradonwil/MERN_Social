@@ -1,15 +1,15 @@
 import React, { useState } from 'react'
 import axios from 'axios'
 import { FaEye, FaEyeSlash } from 'react-icons/fa'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 
 const Register = () => {
   const [userData, setUserData] = useState({
     fullName: "", email: "", password: "", confirmPassword: ""
   })
   const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
   const [showPassword, setShowPassword] = useState(false)
-  const navigate = useNavigate()
 
   const changeInputHandler = (e) => {
     setUserData(prevState => ({ ...prevState, [e.target.name]: e.target.value }))
@@ -23,8 +23,9 @@ const Register = () => {
   }
 
   const registerUser = async (e) => {
-    e.preventDefault();
+    e.preventDefault()
     setError("")
+    setSuccess("")
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(userData.email)) {
@@ -41,14 +42,13 @@ const Register = () => {
     }
 
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/users/register`, userData);
-      navigate('/login');
+      const response = await axios.post(`${import.meta.env.VITE_API_URL}/users/register`, userData)
+      setSuccess(response?.data?.message)
     } catch (error) {
-      setError(error.response?.data?.message);
+      setError(error.response?.data?.message)
     }
   }
 
-  // Realtime password checklist
   const pw = userData.password
   const requirements = [
     { label: "อย่างน้อย 8 ตัวอักษร", met: pw.length >= 8 },
@@ -62,6 +62,8 @@ const Register = () => {
         <h2 style={{ textAlign: "center" }}>สมัครสมาชิก</h2>
         <form onSubmit={registerUser}>
           {error && <p className="form__error-message">{error}</p>}
+          {success && <p style={{ color: 'green', marginBottom: '1rem', textAlign: 'center' }}>{success}</p>}
+
           <input type="text" name='fullName' placeholder='Full Name' onChange={changeInputHandler} autoFocus />
           <input type="email" name='email' placeholder='Email เช่น example@gmail.com' onChange={changeInputHandler} />
 
@@ -70,7 +72,6 @@ const Register = () => {
             <span onClick={() => setShowPassword(!showPassword)}>{showPassword ? <FaEyeSlash /> : <FaEye />}</span>
           </div>
 
-          {/* Password requirements checklist */}
           {pw.length > 0 && (
             <ul style={{ listStyle: "none", padding: "4px 0", margin: "0 0 8px 0", fontSize: "12px" }}>
               {requirements.map((req, i) => (
