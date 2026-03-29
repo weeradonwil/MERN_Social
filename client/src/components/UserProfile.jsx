@@ -3,11 +3,11 @@ import axios from 'axios'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link, useParams } from 'react-router-dom'
 import { LuUpload } from 'react-icons/lu'
-import { FaCheck } from 'react-icons/fa'
 import { userActions } from '../store/user-slice'
 import { uiSliceActions } from '../store/ui-slice'
 
 const DEFAULT_AVATAR = "https://res.cloudinary.com/dtbqrwpbr/image/upload/v1774097734/5951752_hkdrek.png"
+const MAX_SIZE_BYTES = 500000 // 500KB
 
 const UserProfile = ({ totalLikes = 0 }) => {
   const token = useSelector(state => state?.user?.currentUser?.token)
@@ -17,6 +17,7 @@ const UserProfile = ({ totalLikes = 0 }) => {
   const [user, setUser] = useState({})
   const [followsUser, setFollowsUser] = useState(false)
   const [avatar, setAvatar] = useState("")
+  const [avatarError, setAvatarError] = useState("")
 
   const dispatch = useDispatch()
   const { id: userId } = useParams()
@@ -27,12 +28,8 @@ const UserProfile = ({ totalLikes = 0 }) => {
     try {
       const response = await axios.get(
         `${import.meta.env.VITE_API_URL}/users/${userId}`,
-        {
-          withCredentials: true,
-          headers: { Authorization: `Bearer ${token}` }
-        }
+        { withCredentials: true, headers: { Authorization: `Bearer ${token}` } }
       )
-
       setUser(response?.data)
       setFollowsUser(response?.data?.followers?.includes(loggedInUserId) || false)
       setAvatar(response?.data?.profilePhoto || "")
@@ -47,67 +44,19 @@ const UserProfile = ({ totalLikes = 0 }) => {
     }
   }, [token, userId])
 
-  const changeAvatarHandler = async (e) => {
-    e.preventDefault()
-
-    if (!hasNewAvatar) return
-
-    try {
-      const postData = new FormData()
-      postData.append("avatar", avatar)
-
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/users/avatar`,
-        postData,
-        {
-          withCredentials: true,
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      )
-
-      const updatedUser = response?.data
-
-      dispatch(
-        userActions.ChangeCurrentUser({
-          ...currentUser,
-          ...updatedUser
-        })
-      )
-
-      setUser(updatedUser)
-      setAvatar(updatedUser?.profilePhoto || "")
-    } catch (error) {
-      console.log(error)
-    }
-  }
-
   const openEditProfileModal = () => {
     dispatch(uiSliceActions.openEditProfileModal())
   }
-
-
-
 
   const followUnfollowUser = async () => {
     try {
       const response = await axios.get(
         `${import.meta.env.VITE_API_URL}/users/${userId}/follow-unfollow`,
-        {
-          withCredentials: true,
-          headers: { Authorization: `Bearer ${token}` }
-        }
+        { withCredentials: true, headers: { Authorization: `Bearer ${token}` } }
       )
-
       const updatedUser = response?.data
-
       setUser(updatedUser)
-
-      setFollowsUser(
-        updatedUser?.followers?.includes(loggedInUserId)
-      )
-
+      setFollowsUser(updatedUser?.followers?.includes(loggedInUserId))
     } catch (error) {
       console.log(error)
     }
@@ -116,26 +65,16 @@ const UserProfile = ({ totalLikes = 0 }) => {
   return (
     <section className='profile'>
       <div className='profile__container'>
-        <form
-          className='profile__image'
-          onSubmit={changeAvatarHandler}
-          encType='multipart/form-data'
-        >
+        <form className='profile__image' encType='multipart/form-data'>
           <img
             src={hasNewAvatar ? URL.createObjectURL(avatar) : (user?.profilePhoto || DEFAULT_AVATAR)}
             alt=""
             onError={e => { e.target.src = DEFAULT_AVATAR }}
           />
 
-          {!hasNewAvatar ? (
-            <label htmlFor="avatar" className='profile__image-edit'>
-              <span><LuUpload /></span>
-            </label>
-          ) : (
-            <button type='submit' className="profile__image-btn">
-              <FaCheck />
-            </button>
-          )}
+          <label htmlFor="avatar" className='profile__image-edit'>
+            <span><LuUpload /></span>
+          </label>
 
           <input
             type="file"
@@ -145,41 +84,45 @@ const UserProfile = ({ totalLikes = 0 }) => {
               const file = e.target.files[0]
               if (!file) return
 
+              // ตรวจสอบขนาดไฟล์ก่อนอัปโหลด
+              if (file.size > MAX_SIZE_BYTES) {
+                setAvatarError("รูปโปรไฟล์ใหญ่เกินไป ควรมีขนาดเล็กกว่า 500KB")
+                e.target.value = ""
+                return
+              }
+
+              setAvatarError("")
               setAvatar(file)
 
-              const postData = new FormData()
-              postData.append("avatar", file)
-
               try {
+                const postData = new FormData()
+                postData.append("avatar", file)
+
                 const response = await axios.post(
                   `${import.meta.env.VITE_API_URL}/users/avatar`,
                   postData,
-                  {
-                    withCredentials: true,
-                    headers: {
-                      Authorization: `Bearer ${token}`
-                    }
-                  }
+                  { withCredentials: true, headers: { Authorization: `Bearer ${token}` } }
                 )
 
                 const updatedUser = response?.data
-
-                dispatch(
-                  userActions.ChangeCurrentUser({
-                    ...currentUser,
-                    ...updatedUser
-                  })
-                )
-
+                dispatch(userActions.ChangeCurrentUser({ ...currentUser, ...updatedUser }))
                 setUser(updatedUser)
                 setAvatar(updatedUser?.profilePhoto || "")
               } catch (error) {
-                console.log(error)
+                setAvatarError(error?.response?.data?.message || "อัปโหลดรูปไม่สำเร็จ")
+                setAvatar(user?.profilePhoto || "")
               }
             }}
             accept="image/png, image/jpeg, image/jpg"
           />
         </form>
+
+        {/* แจ้งเตือนขนาดรูป */}
+        {avatarError && (
+          <p style={{ color: '#e84393', fontSize: '13px', marginTop: '0.4rem', textAlign: 'center' }}>
+            {avatarError}
+          </p>
+        )}
 
         <h4>{user?.fullName}</h4>
         <small>{user?.email}</small>
@@ -189,12 +132,10 @@ const UserProfile = ({ totalLikes = 0 }) => {
             <h4>{user?.following?.length || 0}</h4>
             <small>Following</small>
           </li>
-
           <li>
             <h4>{user?.followers?.length || 0}</h4>
             <small>Followers</small>
           </li>
-
           <li>
             <h4>{totalLikes}</h4>
             <small>Likes</small>

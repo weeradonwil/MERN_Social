@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import ProfileImage from '../components/ProfileImage'
 import axios from 'axios'
 import { useSelector } from 'react-redux'
@@ -11,6 +11,7 @@ import PostComment from '../components/PostComment'
 
 const SinglePost = () => {
   let { id } = useParams()
+  const navigate = useNavigate()
   const [post, setPost] = useState({})
   const [comments, setComments] = useState([])
   const [comment, setComment] = useState("")
@@ -18,12 +19,19 @@ const SinglePost = () => {
 
   const getPost = async () => {
     try {
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/posts/${id}`, {
+      // ดึง post
+      const postRes = await axios.get(`${import.meta.env.VITE_API_URL}/posts/${id}`, {
         withCredentials: true,
         headers: { Authorization: `Bearer ${token}` }
       })
-      setPost(response?.data)
-      setComments(response?.data?.comments || [])
+      setPost(postRes?.data)
+
+      // ดึง comments แบบ live (ชื่อ/รูปอัปเดตตาม profile)
+      const commentRes = await axios.get(`${import.meta.env.VITE_API_URL}/comments/${id}`, {
+        withCredentials: true,
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setComments(commentRes?.data?.comments || [])
     } catch (error) {
       console.log(error)
     }
@@ -55,20 +63,27 @@ const SinglePost = () => {
         { comment },
         { withCredentials: true, headers: { Authorization: `Bearer ${token}` } }
       )
-      const newComment = response?.data
-      setComments([newComment, ...comments])
+      setComments([response?.data, ...comments])
       setComment("")
     } catch (error) {
       console.log(error)
     }
   }
 
+  const creatorId = typeof post?.creator === 'object' ? post?.creator?._id : post?.creator
+  const creatorPhoto = post?.creator?.profilePhoto
+  const creatorName = post?.creator?.fullName
+
   return (
     <section className="singlePost">
-      <header className="feed__header">
-        <ProfileImage image={post?.creator?.profilePhoto} />
+      <header
+        className="feed__header"
+        style={{ cursor: 'pointer' }}
+        onClick={() => creatorId && navigate(`/users/${creatorId}`)}
+      >
+        <ProfileImage image={creatorPhoto} />
         <div>
-          <h4>{post?.creator?.fullName}</h4>
+          <h4>{creatorName}</h4>
           {post?.createdAt && (
             <small>
               <TimeAgo date={post.createdAt} /> &middot; {new Date(post.createdAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}

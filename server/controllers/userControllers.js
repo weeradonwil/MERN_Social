@@ -6,6 +6,8 @@ const uuid = require("uuid").v4;
 const fs = require("fs")
 const path = require("path")
 const cloudinary = require("../utils/cloudinary")
+const { Resend } = require("resend")
+const resend = new Resend(process.env.RESEND_API_KEY)
 
 // Register user
 // Post : api - users - register
@@ -33,6 +35,14 @@ const registerUser = async (req, res, next) => {
             return next(new HttpError("รหัสผ่านควรมีความยาวอย่างน้อย 8 ตัวอักษร", 422));
         }
 
+        if (!/[A-Z]/.test(password)) {
+            return next(new HttpError("รหัสผ่านต้องมีตัวพิมพ์ใหญ่อย่างน้อย 1 ตัว (A-Z)", 422));
+        }
+
+        if (!/[!@#$%]/.test(password)) {
+            return next(new HttpError("รหัสผ่านต้องมีอักขระพิเศษอย่างน้อย 1 ตัว (!@#$%)", 422));
+        }
+
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -42,6 +52,28 @@ const registerUser = async (req, res, next) => {
             password: hashedPassword
         });
 
+        // ส่ง Welcome Email
+        try {
+            await resend.emails.send({
+                from: "Land@resend.dev",
+                to: lowercasedEmail,
+                subject: "ยินดีต้อนรับสู่ระบบ! 🎉",
+                html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                        <h2 style="color: #e84393;">ยินดีต้อนรับ, ${fullName}! 🎉</h2>
+                        <p>ขอบคุณที่สมัครสมาชิกกับเรา บัญชีของคุณพร้อมใช้งานแล้ว</p>
+                        <p>อีเมลที่ลงทะเบียน: <strong>${lowercasedEmail}</strong></p>
+                        <a href="${process.env.CLIENT_URL}/login" style="display:inline-block; padding: 12px 24px; background:#e84393; color:white; text-decoration:none; border-radius:8px; margin: 16px 0;">
+                            เข้าสู่ระบบ
+                        </a>
+                        <p style="color: #999; font-size: 12px;">หากคุณไม่ได้สมัครสมาชิก กรุณาละเว้นอีเมลนี้</p>
+                    </div>
+                `
+            });
+        } catch (emailError) {
+            console.error("Welcome email error:", emailError);
+        }
+
         res.status(201).json(newUser);
     } catch (error) {
         return next(new HttpError(error.message || "Server Error", 500));
@@ -49,60 +81,42 @@ const registerUser = async (req, res, next) => {
 };
 
 //===== Login user =====
-// Post : api - users - login
-// Unprotected
 const loginUser = async (req, res, next) => {
     try {
         const { email, password } = req.body;
         if (!email || !password) {
             return next(new HttpError("Fill in all fields", 422))
         }
-        // เปลี่ยนอีเมลเป็นตัวพิมพ์เล็ก
         const lowerCasedEmail = email.toLowerCase();
-        // ดึงข้อมูลผู้ใช้จากฐานข้อมูล
         const user = await UserModel.findOne({ email: lowerCasedEmail })
         if (!user) {
             return next(new HttpError("อีเมลหรือรหัสผ่านไม่ถูกต้อง", 422))
         }
         const { uPassword, ...userInfo } = user;
-        //ยืนยันรหัสผ่านอีกครั้ง
         const comparedPass = await bcrypt.compare(password, user?.password);
         if (!comparedPass) {
             return next(new HttpError("อีเมลหรือรหัสผ่านไม่ถูกต้อง", 422))
         }
-        const token = await jwt.sign({ id: user?._id }, process.env.JWT_SECRET,
-            { expiresIn: "1h" })
-        res.status(200).json({
-            token,
-            id: user?._id,
-            profilePhoto: user?.profilePhoto
-        });
-        // res.status(200).json({ token, id: user?._id, ...userInfo });
+        const token = await jwt.sign({ id: user?._id }, process.env.JWT_SECRET, { expiresIn: "1h" })
+        res.status(200).json({ token, id: user?._id, profilePhoto: user?.profilePhoto });
     } catch (error) {
         return next(new HttpError(error))
     }
 }
 
-// ===== Get User =====
-// GET : api - users - id
-// Unprotected
+//===== Get User =====
 const getUser = async (req, res, next) => {
     try {
         const { id } = req.params;
         const user = await UserModel.findById(id).select("-password")
-        if (!user) {
-            return next(new HttpError("ไม่พบผู้ใช้", 422))
-        }
+        if (!user) return next(new HttpError("ไม่พบผู้ใช้", 422))
         res.status(200).json(user)
     } catch (error) {
         return next(new HttpError(error))
     }
 }
 
-
-// ===== GetUsers =====
-// GET : api - users
-// Unprotected
+//===== GetUsers =====
 const getUsers = async (req, res, next) => {
     try {
         const users = await UserModel.find().sort({ createdAt: -1 }).limit(10);
@@ -112,23 +126,18 @@ const getUsers = async (req, res, next) => {
     }
 }
 
-// ===== Edit User =====
-// Patch : api - users - edit
-// Unprotected
+//===== Edit User =====
 const editUser = async (req, res, next) => {
     try {
         const { fullName, bio } = req.body;
-        const editedUser = await UserModel.findByIdAndUpdate(req.user.id,
-            { fullName, bio }, { new: true })
+        const editedUser = await UserModel.findByIdAndUpdate(req.user.id, { fullName, bio }, { new: true })
         res.json(editedUser).status(200)
     } catch (error) {
         return next(new HttpError(error))
     }
 }
 
-// ===== Follow-Unfollow User =====
-// Get : api - users - id - follow-unfollow
-// Unprotected
+//===== Follow-Unfollow User =====
 const followUnfollowUser = async (req, res, next) => {
     try {
         const userToFollowId = req.params.id;
@@ -137,15 +146,12 @@ const followUnfollowUser = async (req, res, next) => {
         }
         const currentUser = await UserModel.findById(req.user.id);
         const isFollowing = currentUser?.following?.includes(userToFollowId);
-        //กดติดตามหากยังไม่ได้ติดตาม หากติดตามอยู่แล้ว ให้กดเลิกติดตาม 
         if (!isFollowing) {
-            const updatedUser = await UserModel.findByIdAndUpdate(userToFollowId,
-                { $push: { followers: req.user.id } }, { new: true })
+            const updatedUser = await UserModel.findByIdAndUpdate(userToFollowId, { $push: { followers: req.user.id } }, { new: true })
             await UserModel.findByIdAndUpdate(req.user.id, { $push: { following: userToFollowId } }, { new: true })
             res.json(updatedUser)
         } else {
-            const updatedUser = await UserModel.findByIdAndUpdate(userToFollowId,
-                { $pull: { followers: req.user.id } }, { new: true })
+            const updatedUser = await UserModel.findByIdAndUpdate(userToFollowId, { $pull: { followers: req.user.id } }, { new: true })
             await UserModel.findByIdAndUpdate(req.user.id, { $pull: { following: userToFollowId } }, { new: true })
             res.json(updatedUser)
         }
@@ -154,77 +160,39 @@ const followUnfollowUser = async (req, res, next) => {
     }
 }
 
-// ===== Change User Profile Photo =====
-// post : api - users - avatar
-// Unprotected
+//===== Change User Profile Photo =====
 const changeUserAvatar = async (req, res, next) => {
     try {
-        if (!req.files.avatar) {
-            return next(new HttpError("โปรดเลือกรูปภาพ", 422))
-        }
+        if (!req.files.avatar) return next(new HttpError("โปรดเลือกรูปภาพ", 422))
         const { avatar } = req.files;
-        //ตรวจสอบขนาดไฟล์
-        if (avatar.size > 500000) {
-            return next(new HttpError("รูปโปรไฟล์ใหญ่เกินไป ควรมีขนาดเล็กกว่า 500kb"))
-        }
-
+        if (avatar.size > 500000) return next(new HttpError("รูปโปรไฟล์ใหญ่เกินไป ควรมีขนาดเล็กกว่า 500kb"))
         let fileName = avatar.name;
         let splittedFilename = fileName.split(".");
         let newFilename = splittedFilename[0] + uuid() + "." + splittedFilename[splittedFilename.length - 1]
         avatar.mv(path.join(__dirname, "..", "uploads", newFilename), async (err) => {
-            if (err) {
-                return next(new HttpError(err))
-            }
-            // บันทึกภาพบน cloudinary
-            const result = await cloudinary.uploader.upload(path.join(__dirname, "..", "uploads", newFilename),
-                { resource_type: "image" });
-            if (!result.secure_url) {
-                return next(new HttpError("ไม่สามารถอัปโหลดรูปภาพไปยัง Cloudinary ได้", 422))
-            }
-            const updatedUser = await UserModel.findByIdAndUpdate(req.user.id, {
-                profilePhoto: result?.
-                    secure_url
-            }, { new: true })
+            if (err) return next(new HttpError(err))
+            const result = await cloudinary.uploader.upload(path.join(__dirname, "..", "uploads", newFilename), { resource_type: "image" });
+            if (!result.secure_url) return next(new HttpError("ไม่สามารถอัปโหลดรูปภาพไปยัง Cloudinary ได้", 422))
+            const updatedUser = await UserModel.findByIdAndUpdate(req.user.id, { profilePhoto: result?.secure_url }, { new: true })
             res.status(200).json(updatedUser)
         })
-
     } catch (error) {
         return next(new HttpError(error));
     }
 };
 
-// ===== Delete User =====
-// DELETE : api/users/:id
-// Protected
+//===== Delete User =====
 const deleteUser = async (req, res, next) => {
     try {
         const { id } = req.params
-
-        // ตรวจสอบว่าเป็นตัวเองเท่านั้น
-        if (req.user.id !== id) {
-            return next(new HttpError("คุณไม่มีสิทธิ์ลบบัญชีนี้", 403))
-        }
-
+        if (req.user.id !== id) return next(new HttpError("คุณไม่มีสิทธิ์ลบบัญชีนี้", 403))
         const user = await UserModel.findById(id)
         if (!user) return next(new HttpError("ไม่พบผู้ใช้", 404))
-
-        // ลบ following/followers references ของคนอื่น
-        await UserModel.updateMany(
-            { following: id },
-            { $pull: { following: id } }
-        )
-        await UserModel.updateMany(
-            { followers: id },
-            { $pull: { followers: id } }
-        )
-
-        // ลบ posts ของ user นี้
+        await UserModel.updateMany({ following: id }, { $pull: { following: id } })
+        await UserModel.updateMany({ followers: id }, { $pull: { followers: id } })
         const PostModel = require('../models/postModel')
         await PostModel.deleteMany({ creator: id })
-
-        // ลบ user
         await UserModel.findByIdAndDelete(id)
-
         res.json({ message: "ลบบัญชีสำเร็จ" })
     } catch (error) {
         return next(new HttpError(error))
@@ -232,4 +200,3 @@ const deleteUser = async (req, res, next) => {
 }
 
 module.exports = { registerUser, loginUser, getUser, getUsers, editUser, followUnfollowUser, changeUserAvatar, deleteUser }
-
