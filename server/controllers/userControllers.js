@@ -176,13 +176,47 @@ const deleteUser = async (req, res, next) => {
     try {
         const { id } = req.params
         if (req.user.id !== id) return next(new HttpError("คุณไม่มีสิทธิ์ลบบัญชีนี้", 403))
+
         const user = await UserModel.findById(id)
         if (!user) return next(new HttpError("ไม่พบผู้ใช้", 404))
+
+        const PostModel = require('../models/postModel')
+        const CommentModel = require('../models/commentModel')
+        const GroupModel = require('../models/GroupModel')
+        const GroupPostModel = require('../models/GroupPostModel')
+        const MessageModel = require('../models/MessageModel')
+        const ConversationModel = require('../models/ConversationModel')
+
+        // ลบออกจาก following/followers ของคนอื่น
         await UserModel.updateMany({ following: id }, { $pull: { following: id } })
         await UserModel.updateMany({ followers: id }, { $pull: { followers: id } })
-        const PostModel = require('../models/postModel')
+
+        // ลบ posts และ comments ของ user
         await PostModel.deleteMany({ creator: id })
+        await CommentModel.deleteMany({ 'creator.creatorId': id })
+
+        // ลบ group posts และออกจากกลุ่ม
+        await GroupPostModel.deleteMany({ creator: id })
+        await GroupModel.updateMany({ members: id }, { $pull: { members: id } })
+
+        // ลบกลุ่มที่ user เป็น creator
+        const ownedGroups = await GroupModel.find({ creator: id })
+        for (const group of ownedGroups) {
+            await GroupPostModel.deleteMany({ group: group._id })
+        }
+        await GroupModel.deleteMany({ creator: id })
+
+        // ลบ messages และ conversations
+        await MessageModel.deleteMany({ senderId: id })
+        const conversations = await ConversationModel.find({ participants: id })
+        for (const conv of conversations) {
+            await MessageModel.deleteMany({ conversationId: conv._id })
+        }
+        await ConversationModel.deleteMany({ participants: id })
+
+        // ลบ user
         await UserModel.findByIdAndDelete(id)
+
         res.json({ message: "ลบบัญชีสำเร็จ" })
     } catch (error) {
         return next(new HttpError(error))
