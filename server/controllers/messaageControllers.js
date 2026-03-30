@@ -6,8 +6,6 @@ const cloudinary = require("../utils/cloudinary");
 const path = require("path");
 const { v4: uuid } = require("uuid");
 
-
-
 // ====================== Create Message
 // POST: api/messages/:receiverId
 // PROTECTED
@@ -44,10 +42,17 @@ const createMessage = async (req, res, next) => {
         }
 
         // หา/สร้าง conversation
-        let conversation = await ConversationModel.findOne({ participants: { $all: [req.user.id, receiverId] } })
+        let conversation = await ConversationModel.findOne({
+            participants: { $all: [req.user.id, receiverId] }
+        })
+
         if (!conversation) {
             conversation = await ConversationModel.create({
                 participants: [req.user.id, receiverId],
+                lastMessage: { text: messageBody || "📷 รูปภาพ", senderId: req.user.id }
+            })
+        } else {
+            await conversation.updateOne({
                 lastMessage: { text: messageBody || "📷 รูปภาพ", senderId: req.user.id }
             })
         }
@@ -60,7 +65,6 @@ const createMessage = async (req, res, next) => {
             image: imageUrl,
             video: videoUrl
         })
-        await conversation.updateOne({ lastMessage: { text: messageBody || "📷 รูปภาพ", senderId: req.user.id } })
 
         // ส่งผ่าน socket แบบ real-time
         const receiverSocketId = getReceiverSocketId(receiverId);
@@ -75,30 +79,30 @@ const createMessage = async (req, res, next) => {
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 // ====================== GET Messages
-// POST: api/messages/:receiverId
+// GET: api/messages/:receiverId
 // PROTECTED
 const getMessages = async (req, res, next) => {
     try {
-        const { receiverId } = req.params;
-        const conversation = await ConversationModel.findOne({ participants: { $all: [req.user.id, receiverId] } })
-        if (!conversation) {
-            return next(new HttpError("คุณไม่ได้สนทนากับบุคคลนี้", 404))
+        const { receiverId } = req.params
+        const conversation = await ConversationModel.findOne({
+            participants: { $all: [req.user.id, receiverId] }
+        })
+        if (!conversation) return next(new HttpError("คุณไม่ได้สนทนากับบุคคลนี้", 404))
+
+        const myId = req.user.id.toString()
+        const deleteEntry = conversation.deletedBy.find(
+            d => d.userId.toString() === myId
+        )
+
+        const query = { conversationId: conversation._id }
+
+        // ถ้าเคยลบ → แสดงเฉพาะข้อความที่ส่งหลังจากเวลาที่ลบ
+        if (deleteEntry) {
+            query.createdAt = { $gt: deleteEntry.deletedAt }
         }
-        const messages = await MessageModel.find({ conversationId: conversation._id }).sort({ createAt: 1 })
+
+        const messages = await MessageModel.find(query).sort({ createdAt: 1 })
         res.json(messages)
 
     } catch (error) {
@@ -106,40 +110,51 @@ const getMessages = async (req, res, next) => {
     }
 }
 
-
-
-
-
-
-
-
-
-
 // ====================== GET Conversations
 // GET: api/conversations
 // PROTECTED
 const getConversations = async (req, res, next) => {
     try {
-        let conversations = await ConversationModel.find({ participants: req.user.id }).populate({
+        let conversations = await ConversationModel.find({
+            participants: req.user.id
+        }).populate({
             path: "participants",
             select: "fullName profilePhoto"
-        }).sort({ createdAt: -1 });
-        //remove logged in user from the participants array
-        conversations.forEach((conversation) => {
-            conversation.participants = conversation.participants.filter(
-                (participant) => participant._id.toString() !== req.user.id.toString()
-            );
-        });
+        }).sort({ createdAt: -1 })
+
+        const myId = req.user.id.toString()
+
+        // filter conversation ที่ลบแล้วและไม่มีข้อความใหม่
+        conversations = await Promise.all(
+            conversations.map(async (conv) => {
+                const deleteEntry = conv.deletedBy.find(
+                    d => d.userId.toString() === myId
+                )
+                if (deleteEntry) {
+                    const hasNewMessage = await MessageModel.exists({
+                        conversationId: conv._id,
+                        createdAt: { $gt: deleteEntry.deletedAt }
+                    })
+                    if (!hasNewMessage) return null
+                }
+                return conv
+            })
+        )
+
+        conversations = conversations.filter(Boolean)
+
+        conversations.forEach((conv) => {
+            conv.participants = conv.participants.filter(
+                p => p._id.toString() !== myId
+            )
+        })
 
         res.json(conversations)
+
     } catch (error) {
         return next(new HttpError(error))
     }
 }
-
-
-
-
 
 // ====================== DELETE Conversation
 // DELETE: api/conversations/:receiverId
@@ -152,10 +167,22 @@ const deleteConversation = async (req, res, next) => {
         })
         if (!conversation) return next(new HttpError("ไม่พบการสนทนา", 404))
 
-        await MessageModel.deleteMany({ conversationId: conversation._id })
-        await ConversationModel.findByIdAndDelete(conversation._id)
+        const alreadyDeleted = conversation.deletedBy.find(
+            d => d.userId.toString() === req.user.id
+        )
+
+        if (alreadyDeleted) {
+            // ลบซ้ำ → อัปเดตเวลาใหม่ (reset)
+            alreadyDeleted.deletedAt = new Date()
+            await conversation.save()
+        } else {
+            await conversation.updateOne({
+                $push: { deletedBy: { userId: req.user.id, deletedAt: new Date() } }
+            })
+        }
 
         res.json({ message: "ลบการสนทนาสำเร็จ" })
+
     } catch (error) {
         return next(new HttpError(error))
     }
