@@ -37,25 +37,26 @@ const Messages = () => {
     } catch (err) { console.log(err) }
   }
 
-  // SOCKET.IO real-time
+  // ✅ SOCKET.IO แก้แล้ว — ไม่ซ้อน on และเพิ่ม receiverId ใน dependency
   useEffect(() => {
     if (!loggedInUserId) return
+
     socketRef.current = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000', {
       query: { userId: loggedInUserId }
     })
-    socketRef.current.on('newMessage', (msg) => {
-      socketRef.current.on('newMessage', (msg) => {
-        const isCurrentConversation =
-          msg?.senderId?.toString() === receiverId ||
-          msg?.receiverId?.toString() === receiverId
 
-        if (isCurrentConversation) {
-          setMessages(prev => [...prev, msg])
-        }
-      })
+    socketRef.current.on('newMessage', (msg) => {
+      const isCurrentConversation =
+        msg?.senderId?.toString() === receiverId ||
+        msg?.receiverId?.toString() === receiverId
+
+      if (isCurrentConversation) {
+        setMessages(prev => [...prev, msg])
+      }
     })
+
     return () => socketRef.current?.disconnect()
-  }, [loggedInUserId])
+  }, [loggedInUserId, receiverId])  // ✅ เพิ่ม receiverId
 
   const getReceiver = async () => {
     try {
@@ -103,7 +104,6 @@ const Messages = () => {
       setImageFile(null)
       setImagePreview(null)
       setPreviewType(null)
-      // reset input file เพื่อให้เลือกไฟล์เดิมซ้ำได้
       const imgInput = document.getElementById('msgImage')
       const vidInput = document.getElementById('msgVideo')
       if (imgInput) imgInput.value = ''
